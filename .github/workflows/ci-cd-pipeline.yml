@@ -1,0 +1,192 @@
+name: CI/CD Pipeline
+run-name: ${{ github.actor }} is Deploying
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - '*'
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      IMAGE_TAG: ${{ github.event_name == 'push' && github.ref_type == 'tag' && github.ref_name || github.sha }}
+    steps:
+  
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and push backend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./expensy-backend
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/backend:${{ env.IMAGE_TAG }}
+            ${{ secrets.DOCKER_USERNAME }}/backend:latest
+
+      - name: Build and push frontend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./expensy-frontend
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/frontend:${{ env.IMAGE_TAG }}
+            ${{ secrets.DOCKER_USERNAME }}/frontend:latest
+          build-args: |
+            NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}
+     
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+        
+      - name: Azure CLI script With a Service Principal Secret
+        uses: azure/cli@v2
+        with:
+          azcliversion: latest
+          inlineScript: |
+            az account show
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.6.5
+          terraform_wrapper: false
+
+      - name: Terraform Init
+        run: terraform init
+        working-directory: terraform/
+
+      - name: Import existing resources
+        env:
+          TF_VAR_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        run: |
+          echo "Using subscription ID: $TF_VAR_subscription_id"
+          terraform import azurerm_resource_group.aks_rg "/subscriptions/${{ secrets.AZURE_SUBSCRIPTION_ID }}/resourceGroups/bacon-expensy-rg" || echo "Import may have failed (resource may already exist)"
+          terraform import azurerm_kubernetes_cluster.aks "/subscriptions/${{ secrets.AZURE_SUBSCRIPTION_ID }}/resourceGroups/bacon-expensy-rg/providers/Microsoft.ContainerService/managedClusters/bacon-expensy-cluster" || echo "Import may have failed (resource may already exist)"
+          terraform import azurerm_public_ip.ingress_ip "/subscriptions/${{ secrets.AZURE_SUBSCRIPTION_ID }}/resourceGroups/bacon-expensy-rg/providers/Microsoft.Network/publicIPAddresses/ingress-public-ip" || echo "Import may have failed (resource may already exist)"
+        working-directory: terraform/
+
+      - name: Terraform Apply
+        env:
+          TF_VAR_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        run: |
+          echo "Using subscription ID: $TF_VAR_subscription_id"
+          terraform apply -auto-approve
+        working-directory: terraform/
+
+      - name: Extract Terraform outputs
+        run: |
+          # Change to terraform directory
+          cd terraform || { echo "::error::terraform directory not found"; exit 1; }
+          
+          # Get outputs using direct file writing
+          terraform output -raw aks_resource_group > aks_rg.txt
+          terraform output -raw aks_cluster_name > aks_cluster.txt
+          
+          # Read values from files
+          AKS_RG=$(cat aks_rg.txt)
+          AKS_CLUSTER=$(cat aks_cluster.txt)
+          
+          # Clean values (remove any debug lines)
+          AKS_RG=$(echo "$AKS_RG" | head -n 1 | tr -d '\n')
+          AKS_CLUSTER=$(echo "$AKS_CLUSTER" | head -n 1 | tr -d '\n')
+          
+          # Verify outputs
+          if [ -z "$AKS_RG" ] || [ -z "$AKS_CLUSTER" ]; then
+            echo "::error::Failed to get Terraform outputs"
+            echo "Debug output:"
+            cat aks_rg.txt
+            cat aks_cluster.txt
+            exit 1
+          fi
+          
+          # Set environment variables
+          echo "AKS_RG=$AKS_RG" >> $GITHUB_ENV
+          echo "AKS_CLUSTER=$AKS_CLUSTER" >> $GITHUB_ENV
+       
+      - name: Configure AKS credentials
+        run: |
+          # Clean only Kubernetes config (preserve Azure auth)
+          rm -f ~/.kube/config
+          mkdir -p ~/.kube
+
+          # Get credentials with admin access (recommended for CI/CD)
+          az aks get-credentials \
+            --resource-group "$AKS_RG" \
+            --name "$AKS_CLUSTER" \
+            --admin \
+            --overwrite-existing
+
+          # Verify context and connectivity
+          echo "Current context:"
+          kubectl config current-context
+          
+          echo "Cluster info:"
+          kubectl cluster-info || { echo "::error::Cluster connection failed"; exit 1; }
+          
+          echo "Nodes:"
+          kubectl get nodes -o wide || { echo "::error::Failed to get nodes"; exit 1; }
+
+      - name: Setup Kubernetes Tools
+        run: |
+          # Install kubectl
+          sudo apt-get update && sudo apt-get install -y kubectl
+          
+          # Install Helm
+          curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+      
+      - name: Install Nginx Ingress Controller
+        run: |
+          # Add the ingress-nginx Helm repo
+          helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+          helm repo update
+
+          # Install ingress-nginx
+          helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx \
+            --namespace ingress-nginx \
+            --create-namespace \
+            --set controller.service.type=LoadBalancer \
+
+      - name: Create Kubernetes Secrets
+        run: |
+          kubectl create secret generic app-secrets \
+            --from-literal=DATABASE_URI=${{ secrets.DATABASE_URI }} \
+            --from-literal=REDIS_PASSWORD=${{ secrets.REDIS_PASSWORD }} \
+            --from-literal=DATABASE_PASSWORD=${{ secrets.DATABASE_PASSWORD }} \
+            --from-literal=NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }} \
+            --dry-run=client -o yaml | kubectl apply -f -    
+
+      - name: Deploy Applications
+        run: |
+          # Apply Kubernetes manifests
+          kubectl apply -f k8s/
+
+          # Wait for each deployment to be ready (optional)
+          deployments=(
+            "backend"
+            "frontend"
+          )
+
+          for dep in "${deployments[@]}"; do
+            echo "Waiting for rollout of $dep..."
+            kubectl rollout status deployment/$dep --timeout=90s
+          done
+
+          # Show final status for verification
+          kubectl get pods
+          kubectl get services
+          kubectl get ingress
