@@ -161,9 +161,6 @@ jobs:
             --create-namespace \
             --set controller.service.type=LoadBalancer \
 
-      - name: Delete old secret
-        run: kubectl delete secret app-secrets --ignore-not-found
-
       - name: Create Kubernetes Secrets
         run: |
           kubectl create secret generic app-secrets \
