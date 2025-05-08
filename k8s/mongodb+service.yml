@@ -19,15 +19,15 @@ spec:
             - containerPort: 27017
           env:
             - name: DATABASE_URI
-          valueFrom:
-            secretKeyRef:
-              name: app-secrets
-              key: DATABASE_URI
-        - name: DATABASE_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: app-secrets
-              key: DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: DATABASE_URI
+            - name: DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: DATABASE_PASSWORD
 ---
 apiVersion: v1
 kind: Service
