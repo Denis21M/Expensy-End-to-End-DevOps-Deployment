@@ -165,7 +165,7 @@ jobs:
         run: |
           kubectl create secret generic app-secrets \
             --from-literal=DATABASE_URI=${{ secrets.DATABASE_URI }} \
-            --from-literal=DATABASE_PASSWORD=${{ secrets.DATABASE_PASSWORD }} \
+            --from-literal=DATABASE_PASSWORD=${{ secrets.DATABASE_PASSWORD }}\
             --from-literal=NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }} \
             --dry-run=client -o yaml | kubectl apply -f -
    
