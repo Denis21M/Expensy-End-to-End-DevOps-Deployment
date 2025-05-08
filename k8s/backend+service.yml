@@ -25,7 +25,9 @@ spec:
                 secretKeyRef:
                   name: app-secrets
                   key: DATABASE_URI
-            - name: MONGODB_PORT
+            - name: DB_HOST
+              value: "mongodb"
+            - name: DB_PORT
               value: "27017"
             - name: REDIS_HOST
               value: "redis"
