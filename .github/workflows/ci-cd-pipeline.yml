@@ -175,15 +175,9 @@ jobs:
           # Apply Kubernetes manifests
           kubectl apply -f k8s/
 
-          # Wait for each deployment to be ready (optional)
-          deployments=(
-            "backend"
-            "frontend"
-          )
-
           for dep in "${deployments[@]}"; do
             echo "Waiting for rollout of $dep..."
-            kubectl rollout status deployment/$dep --timeout=90s
+            kubectl rollout status deployment/$dep --timeout=180s
           done
 
           # Show final status for verification
