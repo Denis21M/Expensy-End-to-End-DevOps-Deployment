@@ -25,16 +25,6 @@ spec:
                 secretKeyRef:
                   name: app-secrets
                   key: DATABASE_URI
-            - name: DATABASE_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: app-secrets
-                  key: DATABASE_PASSWORD
-            - name: REDIS_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: app-secrets
-                  key: REDIS_PASSWORD
             - name: REDIS_HOST
               value: "redis"
             - name: REDIS_PORT
