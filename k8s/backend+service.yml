@@ -25,6 +25,11 @@ spec:
                 secretKeyRef:
                   name: app-secrets
                   key: DATABASE_URI
+            - name: DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: DATABASE_PASSWORD
             - name: DB_HOST
               value: "mongodb"
             - name: DB_PORT
