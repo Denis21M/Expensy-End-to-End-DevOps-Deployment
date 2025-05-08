@@ -169,7 +169,6 @@ jobs:
             --from-literal=NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }} \
             --dry-run=client -o yaml | kubectl apply -f -
    
-
       - name: Deploy Applications
         run: |
           # Apply Kubernetes manifests
