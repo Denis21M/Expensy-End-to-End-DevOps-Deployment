@@ -20,16 +20,16 @@ spec:
             - containerPort: 8706
           env:
             # Database Configuration
-            - name: DATABASE_URI
+            - name: MONGO_INITDB_ROOT_USERNAME
               valueFrom:
                 secretKeyRef:
-                  name: app-secrets
-                  key: DATABASE_URI
-            - name: DATABASE_PASSWORD
+                  name: mongo-secret
+                  key: MONGO_INITDB_ROOT_USERNAME
+            - name: MONGO_INITDB_ROOT_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: app-secrets
-                  key: DATABASE_PASSWORD
+                  name: mongo-secret
+                  key: MONGO_INITDB_ROOT_PASSWORD
             - name: DB_HOST
               value: "mongodb"
             - name: DB_PORT
