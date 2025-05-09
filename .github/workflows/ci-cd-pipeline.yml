@@ -163,7 +163,7 @@ jobs:
           helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx \
             --namespace ingress-nginx \
             --create-namespace \
-            --set controller.service.LoadBalancerIP=4.231.216.125 \
+            --set controller.service.LoadBalancerIP=$STATIC_IP \
 
       - name: Create Kubernetes Secrets
         shell: bash
