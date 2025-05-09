@@ -30,6 +30,11 @@ spec:
                 secretKeyRef:
                   name: app-secrets
                   key: MONGO_INITDB_ROOT_PASSWORD
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: REDIS_PASSWORD
             - name: DB_HOST
               value: "mongodb"
             - name: DB_PORT
