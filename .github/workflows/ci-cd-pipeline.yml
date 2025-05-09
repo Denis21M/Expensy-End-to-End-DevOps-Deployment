@@ -96,7 +96,7 @@ jobs:
           # Get outputs using direct file writing
           terraform output -raw aks_resource_group > aks_rg.txt
           terraform output -raw aks_cluster_name > aks_cluster.txt
-          terraform output -raw ingress_ip_address > ingress_ip.txt
+          terraform output -raw ingress_public_ip > ingress_ip.txt
           
           # Read values from files
           AKS_RG=$(cat aks_rg.txt)
