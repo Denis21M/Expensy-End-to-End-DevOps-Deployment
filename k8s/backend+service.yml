@@ -19,7 +19,6 @@ spec:
           ports:
             - containerPort: 8706
           env:
-            # Database Configuration
             - name: MONGO_INITDB_ROOT_USERNAME
               valueFrom:
                 secretKeyRef:
@@ -35,10 +34,6 @@ spec:
                 secretKeyRef:
                   name: app-secrets
                   key: REDIS_PASSWORD
-            - name: DB_HOST
-              value: "mongo"
-            - name: DB_PORT
-              value: "27017"
             - name: REDIS_HOST
               value: "redis"
             - name: REDIS_PORT
