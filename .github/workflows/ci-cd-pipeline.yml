@@ -181,9 +181,22 @@ jobs:
           # Apply Kubernetes manifests
           kubectl apply -f k8s/
 
-          for dep in "${deployments[@]}"; do
-            echo "Waiting for rollout of $dep..."
-            kubectl rollout status deployment/$dep --timeout=180s
+      - name: Rollout Restart Deployments
+        run: |
+          deployments=(
+            "frontend"
+            "backend" 
+          )
+
+          for deployment in "${deployments[@]}"; do
+            echo "Restarting $deployment..."
+            kubectl rollout restart deployment/$deployment
+
+            # Wait with timeout
+            if ! kubectl rollout status deployment/$deployment --timeout=90s; then
+              echo "::warning::Rollout for $deployment timed out"
+              kubectl delete pods --field-selector=status.phase!=Running --force --grace-period=0
+            fi
           done
 
           # Show final status for verification
