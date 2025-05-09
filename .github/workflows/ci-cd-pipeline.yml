@@ -96,17 +96,20 @@ jobs:
           # Get outputs using direct file writing
           terraform output -raw aks_resource_group > aks_rg.txt
           terraform output -raw aks_cluster_name > aks_cluster.txt
+          terraform output -raw ingress_ip_address > ingress_ip.txt
           
           # Read values from files
           AKS_RG=$(cat aks_rg.txt)
           AKS_CLUSTER=$(cat aks_cluster.txt)
+          STATIC_IP=$(cat ingress_ip.txt)
           
           # Clean values (remove any debug lines)
           AKS_RG=$(echo "$AKS_RG" | head -n 1 | tr -d '\n')
           AKS_CLUSTER=$(echo "$AKS_CLUSTER" | head -n 1 | tr -d '\n')
+          STATIC_IP=$(cat ingress_ip.txt | head -n 1 | tr -d '\n')
           
           # Verify outputs
-          if [ -z "$AKS_RG" ] || [ -z "$AKS_CLUSTER" ]; then
+          if [ -z "$AKS_RG" ] || [ -z "$AKS_CLUSTER" ] || [ -z "$STATIC_IP" ]; then
             echo "::error::Failed to get Terraform outputs"
             echo "Debug output:"
             cat aks_rg.txt
@@ -117,6 +120,7 @@ jobs:
           # Set environment variables
           echo "AKS_RG=$AKS_RG" >> $GITHUB_ENV
           echo "AKS_CLUSTER=$AKS_CLUSTER" >> $GITHUB_ENV
+          echo "STATIC_IP=$STATIC_IP" >> $GITHUB_ENV
        
       - name: Configure AKS credentials
         run: |
