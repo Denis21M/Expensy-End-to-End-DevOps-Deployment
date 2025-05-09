@@ -4,9 +4,8 @@ metadata:
   name: expensy-ingress
   namespace: default
   annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /
+    kubernetes.io/ingress.class: nginx
 spec:
-  ingressClassName: nginx
   rules:
   - host: bacon-expensy-app.northeurope.cloudapp.azure.com
     http:
