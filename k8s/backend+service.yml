@@ -29,6 +29,11 @@ spec:
                 secretKeyRef:
                   name: app-secrets
                   key: MONGO_INITDB_ROOT_PASSWORD
+            - name: DATABASE_URI
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: DATABASE_URI
             - name: REDIS_PASSWORD
               valueFrom:
                 secretKeyRef:
