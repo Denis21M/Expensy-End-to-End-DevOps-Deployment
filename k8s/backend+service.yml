@@ -36,7 +36,7 @@ spec:
                   name: app-secrets
                   key: REDIS_PASSWORD
             - name: DB_HOST
-              value: "mongodb"
+              value: "mongo"
             - name: DB_PORT
               value: "27017"
             - name: REDIS_HOST
