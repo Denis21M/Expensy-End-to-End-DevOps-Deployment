@@ -10,4 +10,8 @@ output "ingress_public_ip" {
  value = azurerm_public_ip.ingress_ip.ip_address
 }
 
+output "ingress_dns_name" {
+  value = azurerm_public_ip.ingress_ip.fqdn
+}
+
 
