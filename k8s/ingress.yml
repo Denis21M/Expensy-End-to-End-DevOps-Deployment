@@ -8,7 +8,8 @@ metadata:
 spec:
   ingressClassName: nginx
   rules:
-  - http:
+  - host: bacon-expensy-app.northeurope.cloudapp.azure.com
+    http:
       paths:
       - path: /
         pathType: Prefix
@@ -16,7 +17,7 @@ spec:
           service:
             name: frontend
             port:
-              number: 3000
+              number: 80
       - path: /api
         pathType: Prefix
         backend:
